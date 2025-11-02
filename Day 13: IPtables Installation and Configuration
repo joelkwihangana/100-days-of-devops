@@ -1,0 +1,155 @@
+# Day 13: IPtables Installation and Configuration
+
+Securing Apache port **3004** on Nautilus App Servers in Stratos Datacenter.
+**Goal:** Block incoming traffic on port 3004 for all hosts except the Load Balancer, and make rules persistent after reboot.
+
+---
+
+## **Infrastructure Details**
+
+| Server  | IP            | User   | Purpose           |
+| ------- | ------------- | ------ | ----------------- |
+| stapp01 | 172.16.238.10 | tony   | Nautilus App 1    |
+| stapp02 | 172.16.238.11 | steve  | Nautilus App 2    |
+| stapp03 | 172.16.238.12 | banner | Nautilus App 3    |
+| stlb01  | 172.16.238.14 | loki   | Nautilus HTTP LBR |
+
+---
+
+## **Step 1: Install iptables on all App Servers**
+
+```bash
+sudo yum install -y iptables-services
+```
+
+**Explanation:**
+
+* `iptables-services`: package that allows you to use `iptables` with systemd.
+* `-y`: automatically confirms installation.
+* This ensures the firewall service is available and can start at boot.
+
+Check installation:
+
+```bash
+rpm -qa | grep iptables
+```
+
+---
+
+## **Step 2: Allow Load Balancer, Block All Others on port 3004**
+
+**Key Concept:** iptables rules are **processed top-down**. The first matching rule applies.
+
+1. **Allow traffic from Load Balancer (stlb01)**
+
+```bash
+sudo iptables -A INPUT -p tcp -s 172.16.238.14 --dport 3004 -j ACCEPT
+```
+
+* `-A INPUT`: append rule to the INPUT chain.
+* `-p tcp`: protocol is TCP (used by HTTP).
+* `-s 172.16.238.14`: source IP (Load Balancer).
+* `--dport 3004`: destination port.
+* `-j ACCEPT`: allow traffic.
+
+2. **Block all other traffic to port 3004**
+
+```bash
+sudo iptables -A INPUT -p tcp --dport 3004 -j REJECT
+```
+
+* This rejects traffic from all other IPs.
+* Because rules are **processed in order**, Load Balancer traffic is accepted first, then all others are blocked.
+
+3. **Allow SSH for remote management**
+
+```bash
+sudo iptables -A INPUT -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+```
+
+* Ensures we don’t lock ourselves out.
+
+---
+
+## **Step 3: Make Rules Persistent**
+
+```bash
+sudo service iptables save
+sudo systemctl enable iptables
+sudo systemctl start iptables
+```
+
+**Explanation:**
+
+* `service iptables save`: saves the current rules to `/etc/sysconfig/iptables`.
+* `systemctl enable iptables`: starts iptables automatically on boot.
+* `systemctl start iptables`: ensures rules are currently active.
+
+Check saved rules:
+
+```bash
+sudo cat /etc/sysconfig/iptables
+```
+
+---
+
+## **Step 4: Verify Rules**
+
+1. **Check rules on App Servers**
+
+```bash
+sudo iptables -L -n
+```
+
+Expected output snippet:
+
+```
+ACCEPT     tcp  172.16.238.14         0.0.0.0/0          tcp dpt:3004
+REJECT     tcp  0.0.0.0/0             0.0.0.0/0          tcp dpt:3004
+```
+
+2. **Test connectivity from Load Balancer**
+
+```bash
+ssh loki@stlb01
+curl http://172.16.238.10:3004   # should succeed
+curl http://172.16.238.11:3004   # should succeed
+curl http://172.16.238.12:3004   # should succeed
+```
+
+3. **Test connectivity from Jump Host (non-LB)**
+
+```bash
+curl http://172.16.238.10:3004   # should fail
+curl http://172.16.238.11:3004   # should fail
+curl http://172.16.238.12:3004   # should fail
+```
+
+---
+
+## **Step 5: Apply on All App Servers**
+
+Repeat **Steps 1–4** on `stapp02` and `stapp03`.
+
+* Rules are the same, just change server IP in `curl` tests.
+* Always allow **Load Balancer IP** first, then block all others.
+
+---
+
+## **Step 6: Verification Table**
+
+| Server  | From LB | From Jump Host |
+| ------- | ------- | -------------- |
+| stapp01 | ✅       | ❌              |
+| stapp02 | ✅       | ❌              |
+| stapp03 | ✅       | ❌              |
+
+---
+
+## **Extra Notes**
+
+* Always remember **rule order matters**: allow first, block later.
+* Use `iptables -S` to see rules in **command syntax**.
+* Make rules persistent to survive **reboots**.
+
+---
