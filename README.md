@@ -15,4 +15,3 @@ The notes are intentionally written to support:
 - Engineers transitioning into DevOps or cloud roles
 - Teams deploying workloads on Linux-based cloud platforms
 - Instructors or advocates explaining infrastructure concepts to others
-
