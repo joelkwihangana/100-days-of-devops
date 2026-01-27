@@ -1,4 +1,4 @@
-#100 Days of DevOps
+# 100 Days of DevOps
 
 This repository is a hands-on, teaching-focused DevOps learning series designed to help engineers understand Linux systems, cloud infrastructure, automation, and real-world operational workflows.
 
