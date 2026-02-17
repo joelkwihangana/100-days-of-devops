@@ -1,12 +1,3 @@
-# Inkomoko IMS Admin Interview Preparation
-## From Your Current Level to Job-Ready Understanding
-
-**Your Reality:** Beginner PostgreSQL, basic Docker confusion, good Linux fundamentals  
-**Interview:** Thursday, February 19, 2026 (40 min panel)  
-**Goal:** Deep understanding to think through technical questions, not memorize scripts
-
----
-
 # PART 1: DATABASES - FIRST PRINCIPLES
 
 ## Why Databases Exist
