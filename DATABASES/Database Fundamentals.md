@@ -1,4 +1,4 @@
-# Database Fundamentals - From Your Level to Interview Ready
+# Database Fundamentals
 
 ## PART 1: What You Already Know (Let's Build From Here)
 
